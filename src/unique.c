@@ -4,7 +4,7 @@
 #include <math.h>
 
 #define BUF_CHUNK 128
-#define CHUNK_SIZE 1024*1024
+#define CHUNK_SIZE 256
 
 #define min(x, y) (x < y ? x : y)
 
@@ -16,7 +16,7 @@ int compare (const void * a, const void * b)
 /*
 Function to make set of unique bytes from text
 */
-unsigned short int uniques(unsigned char* r_list,FILE* fptr){
+unsigned char uniques(unsigned char* r_list,FILE* fptr){
     char f_dup = 0x00;
     unsigned char* rbyte_buffer = (unsigned char* )malloc(CHUNK_SIZE);
     unsigned int max_read;
@@ -51,7 +51,7 @@ unsigned short int uniques(unsigned char* r_list,FILE* fptr){
         }
         i+=1;
         if(i > max_read){
-            max_read = 0;
+            max_read = fread(rbyte_buffer,1,CHUNK_SIZE,fptr);
             i=0;
         }
     }
@@ -97,7 +97,7 @@ void compress(FILE* input_file, FILE* output_file){
     unsigned int need_wb = (((f_size * N)+3+R)/8)+X;
     unsigned char byte = R<<(8-offset) & 0xff;
 
-    printf("X:%d N:%d R:%d\n", X, N, R);
+    printf("Compress X:%d N:%d R:%d\n", X, N, R);
 
     max_read = fread(rbyte_buffer, 1, CHUNK_SIZE,input_file);
     while (max_read > 0){
@@ -156,7 +156,7 @@ void decompress(FILE* input_file, FILE* output_file){
 
     const unsigned char R = byte>>(8-offset);
     fseek(input_file, -1L, SEEK_CUR);
-    
+    printf("Decompress X:%d N:%d R:%d\n", X, N, R);
     fseek(input_file, 0L, SEEK_END);
     f_size = ftell(input_file)-(X+1);
     fseek(input_file, (1+X), SEEK_SET);
@@ -198,29 +198,25 @@ void decompress(FILE* input_file, FILE* output_file){
 }
 
 int main(int argc, char* argv[]){
-    //for (int i = argc; i>0;i--){
-    //    printf("%s\n",argv[i]);
-    //}
+    for (int i = 0; i<argc; i++){
+        printf("%s\n",argv[i]);
+    }
 
-    FILE* fptr;
-    FILE* wptr;
-    FILE* zptr;
+    if(argc > 2){
+        FILE* input;
+        FILE* output;
 
-    fptr = fopen("test.txt","rb");
-    wptr = fopen("testW.txt","wb");
+        input = fopen(argv[1],"rb");
+        output = fopen(argv[2],"wb");
+        if (argv[3][0] == 'c'){
+            compress(input, output);
+        }else if (argv[3][0] == 'd'){
+            decompress(input,output);
+        }
 
-    compress(fptr, wptr);
+        fclose(input);
+        fclose(output);
 
-    fclose(fptr);
-    fclose(wptr);
-
-    wptr = fopen("testW.txt","rb");
-    zptr = fopen("testZ.txt","wb");
-
-    decompress(wptr, zptr);
-
-    fclose(wptr);
-    fclose(zptr);
-
+    }
     return 0;
 }
